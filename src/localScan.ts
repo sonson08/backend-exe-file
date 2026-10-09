@@ -1,6 +1,6 @@
 import type { Finding, RecommendedAction, RedactSpan, RiskLevel, ScanResult, Severity } from "./types.ts";
 
-const MODEL = "llama3.2";
+const MODEL = "hf.co/mradermacher/Distil-PII-Llama-3.2-3B-Instruct-GGUF:Q4_K_M";
 
 const LABELS: Record<string, string> = {
   person: "PERSON",
@@ -13,6 +13,13 @@ const LABELS: Record<string, string> = {
   ip_address: "IP_ADDRESS",
   date_of_birth: "DATE_OF_BIRTH",
   payment_card: "CARD",
+  account_number: "ACCOUNT_NUMBER",
+  transaction_id: "TRANSACTION_ID",
+  personal_id: "PERSONAL_ID",
+  gender: "GENDER",
+  age: "AGE",
+  race: "RACE",
+  marital_status: "MARITAL_STATUS",
   health_info: "HEALTH",
   financial_info: "FINANCIAL",
   confidential_info: "CONFIDENTIAL",
@@ -29,6 +36,16 @@ const ACTION_BY_RISK: Record<RiskLevel, RecommendedAction> = {
 const AI_SEVERITY: Record<string, Severity> = {
   person: "medium",
   person_name: "medium",
+  email: "high",
+  phone: "medium",
+  government_id: "high",
+  personal_id: "high",
+  payment_card: "high",
+  account_number: "high",
+  gender: "low",
+  age: "low",
+  race: "medium",
+  marital_status: "low",
   address: "high",
   credential: "high",
   date_of_birth: "high",
@@ -77,6 +94,10 @@ const DOB_PATTERN = new RegExp(
 );
 const PASSPORT_PATTERN = /\bpassport\b(?:\s*(?:no\.?|number|num|#))?(?:\s+is)?\s*[:#-]?\s*([A-Z]{1,2}\d{6,9})\b/gi;
 const PERSON_BEFORE_BORN_PATTERN = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})(?=,?\s+born\b)/g;
+const PERSON_LABEL_PATTERN = /\b(?:[Cc]ustomer|[Cc]lient|[Pp]atient|[Ee]mployee|[Ff]ull [Nn]ame|[Nn]ame)\s*:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+\b(?!\s*:)){0,2})/g;
+const ACCOUNT_PATTERN = /\b(?:account|acct|a\/c)\.?(?:\s*(?:no\.?|number|num|#))?\s*[:#-]?\s*(\d(?:[ -]?\d){5,19})(?![\d-])/gi;
+const TRANSACTION_LABEL_PATTERN = /\b(?:transaction|txn|trans|reference|ref)\.?(?:\s*(?:id|no\.?|number|num|#))\s*[:#-]?\s*([A-Z0-9][A-Z0-9-]{3,39})\b/gi;
+const TRANSACTION_TOKEN_PATTERN = /\bTXN[-_]?[A-Z0-9-]*\d[A-Z0-9-]*\b/gi;
 const TIN_PATTERN = /(?<![\d-])\d{3}-\d{3}-\d{3}(?:-\d{3}(?:\d{2})?)?(?![\d-])/g;
 const SSS_PATTERN = /(?<![\d-])\d{2}-\d{7}-\d(?![\d-])/g;
 const PHILHEALTH_PATTERN = /(?<![\d-])\d{2}-\d{9}-\d(?![\d-])/g;
@@ -140,7 +161,11 @@ function patternFindings(text: string): DraftFinding[] {
   const cards = matchAll(text, CARD_PATTERN)
     .filter((span) => passesLuhn(span.match.replace(/\D/g, "")))
     .map((span) => finding(span, "payment_card", "high", "payment_card", "Payment card number"));
-  const people = [...capturedSpan(text, PERSON_PATTERN), ...capturedSpan(text, PERSON_BEFORE_BORN_PATTERN)]
+  const accounts = capturedSpan(text, ACCOUNT_PATTERN).map((span) => finding(span, "account_number", "high", "account_number", "Account number"));
+  const transactions = [...capturedSpan(text, TRANSACTION_LABEL_PATTERN), ...matchAll(text, TRANSACTION_TOKEN_PATTERN)]
+    .filter((span) => /\d/.test(span.match))
+    .map((span) => finding(span, "transaction_id", "medium", "transaction_id", "Transaction ID"));
+  const people = [...capturedSpan(text, PERSON_PATTERN), ...capturedSpan(text, PERSON_BEFORE_BORN_PATTERN), ...capturedSpan(text, PERSON_LABEL_PATTERN)]
     .filter((span) => /^[A-Z]/.test(span.match))
     .map((span) => finding(span, "person", "medium", "person", "Person name"));
   const addresses = matchAll(text, ADDRESS_PATTERN).map((span) => finding(span, "address", "high", "address", "Street address"));
@@ -163,7 +188,7 @@ function patternFindings(text: string): DraftFinding[] {
     ),
     ...capturedSpan(text, PASSPORT_PATTERN).map((span) => finding(span, "government_id", "high", "passport", "Passport number")),
   ];
-  return [...email, ...mobile, ...landline, ...cards, ...people, ...addresses, ...ips, ...labeledSecrets, ...tokenSecrets, ...births, ...government];
+  return [...email, ...mobile, ...landline, ...cards, ...accounts, ...transactions, ...people, ...addresses, ...ips, ...labeledSecrets, ...tokenSecrets, ...births, ...government];
 }
 
 function overlaps(a: { start: number; end: number }, b: { start: number; end: number }): boolean {
@@ -218,13 +243,19 @@ function decide(findings: DraftFinding[]): { riskLevel: RiskLevel; recommendedAc
   return { riskLevel, recommendedAction: ACTION_BY_RISK[riskLevel] };
 }
 
+function locateQuote(text: string, needle: string): number {
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const whole = new RegExp(`(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`).exec(text);
+  return whole ? whole.index : text.indexOf(needle);
+}
+
 export function locateAiFindings(text: string, quotes: Array<{ category: string; quote: string; reason: string }>): DraftFinding[] {
   return quotes.flatMap((quote) => {
     const category = CATEGORY_ALIAS[quote.category] ?? quote.category;
     const severity = AI_SEVERITY[category];
     const needle = quote.quote.trim();
     if (!severity || needle.length < 2) return [];
-    const start = text.indexOf(needle);
+    const start = locateQuote(text, needle);
     if (start < 0) return [];
     return [
       {

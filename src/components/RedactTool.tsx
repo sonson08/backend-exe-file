@@ -90,14 +90,13 @@ export function RedactTool({ status }: { status: { title: string; detail: string
           <h1>Text Redact</h1>
           <StatusPill title={status.title} detail={status.detail} tone={status.tone} />
         </div>
-        <p>Remove sensitive information from any text on this device.</p>
+        <p>Redact sensitive information from any supplied text.</p>
       </section>
 
       <section className="card">
         <StepHeading
           step={1}
           title="Enter your text"
-          hint="Paste or type text below. Sensitive details will be detected and replaced."
           aside={
             <span className="aside-row">
               {result ? (
@@ -129,7 +128,7 @@ export function RedactTool({ status }: { status: { title: string; detail: string
           <textarea
             className="text-input"
             value={draft}
-            placeholder="Paste the text you want to redact"
+            placeholder="Paste or type text below. Sensitive details will be detected and redacted."
             aria-label="Enter your text"
             onChange={(event) => {
               setDraft(event.target.value);

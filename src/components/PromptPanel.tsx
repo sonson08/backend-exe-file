@@ -100,6 +100,13 @@ export function PromptPanel({ extension, status, review, redacting, onToggleFind
 
   return (
     <main className="panel">
+      <header className="brand-header">
+        <img src="/icons/icon32.png" alt="" width="32" height="32" />
+        <div>
+          <strong>Warden</strong>
+          <p>Your data. Your control.</p>
+        </div>
+      </header>
       <div hidden={onChatGpt}>
         <RedactTool status={redactStatus} />
       </div>
@@ -218,7 +225,7 @@ function ReadyReview({
         </section>
 
         <section className="card">
-          <StepHeading step={3} title="Preview (will be sent to ChatGPT)" hint="This is the text with sensitive information replaced." />
+          <StepHeading step={3} title="Preview" hint="This is the text with sensitive information replaced." />
           <div className="preview-box preview-blue">
             {review.redactedText ? <PlaceholderText text={review.redactedText} tone="blue" /> : <p className="preview-text">The redacted draft is still being prepared.</p>}
           </div>
@@ -230,7 +237,7 @@ function ReadyReview({
               onClick={() => onDecide("send_redacted")}
             >
               <SendIcon />
-              Send redacted prompt
+              Send to ChatGPT
             </button>
             <button type="button" className="button button-ghost" onClick={() => onDecide("cancel")}>
               Cancel

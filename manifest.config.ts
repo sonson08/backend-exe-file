@@ -2,7 +2,7 @@ import { defineManifest } from "@crxjs/vite-plugin";
 
 export default defineManifest({
   manifest_version: 3,
-  name: "Warden - Your data. Your control.",
+  name: "Warden",
   description: "Your data. Your control.",
   version: "0.1.0",
   action: {

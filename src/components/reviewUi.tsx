@@ -3,6 +3,7 @@ import type { Finding } from "../types.ts";
 import { draftSegments } from "../highlight.ts";
 
 export function categoryTitle(finding: Finding): string {
+  if (finding.source === "ai") return categoryFallback(finding.category);
   return finding.reason || categoryFallback(finding.category);
 }
 
@@ -18,19 +19,19 @@ function categoryFallback(category: string): string {
     ip_address: "IP address",
     date_of_birth: "Date of birth",
     payment_card: "Payment card",
+    account_number: "Account number",
+    transaction_id: "Transaction ID",
+    personal_id: "Personal ID",
+    gender: "Gender",
+    age: "Age",
+    race: "Race or ethnicity",
+    marital_status: "Marital status",
     health_info: "Health",
     financial_info: "Financial",
     confidential_info: "Confidential",
     confidential_keyword: "Confidential keyword",
   };
   return labels[category] ?? category;
-}
-
-export function markTone(finding: Finding): "amber" | "rose" {
-  if (finding.category === "person" || finding.category === "person_name" || finding.category === "date_of_birth") {
-    return "amber";
-  }
-  return "rose";
 }
 
 export function HighlightedText({
@@ -50,7 +51,7 @@ export function HighlightedText({
         if (!segment.finding) return <span key={index}>{segment.text}</span>;
         const active = keptIds === undefined || keptIds.includes(segment.finding.id);
         return (
-          <mark key={`${segment.finding.id}-${index}`} className={`span span-${markTone(segment.finding)}`} data-off={active ? "false" : "true"}>
+          <mark key={`${segment.finding.id}-${index}`} className="span span-rose" data-off={active ? "false" : "true"}>
             {segment.text}
           </mark>
         );
@@ -144,7 +145,7 @@ export function FindingRows({
 function CategoryIcon({ category }: { category: string }) {
   return (
     <span className="cat-icon" aria-hidden="true">
-      {category === "email" ? <MailIcon /> : category === "date_of_birth" ? <CalendarIcon /> : category === "phone" ? <PhoneIcon /> : category === "government_id" ? <IdIcon /> : category === "payment_card" ? <CardIcon /> : category === "credential" ? <KeyIcon /> : category === "address" ? <PinIcon /> : <PersonIcon />}
+      {category === "email" ? <MailIcon /> : category === "date_of_birth" ? <CalendarIcon /> : category === "phone" ? <PhoneIcon /> : category === "government_id" ? <IdIcon /> : category === "payment_card" || category === "account_number" || category === "transaction_id" ? <CardIcon /> : category === "credential" ? <KeyIcon /> : category === "address" ? <PinIcon /> : <PersonIcon />}
     </span>
   );
 }

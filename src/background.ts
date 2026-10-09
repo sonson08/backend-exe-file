@@ -277,7 +277,7 @@ async function decide(decision: Decision): Promise<void> {
     review = {
       ...snapshot,
       phase: "ready",
-      redactError: "The prompt box could not be cleared and the redacted draft could not be pasted. Refresh ChatGPT, then press Send redacted again.",
+      redactError: "The prompt box could not be cleared and the redacted draft could not be pasted. Refresh ChatGPT, then press Send to ChatGPT again.",
     };
     reviewTabId = tabId ?? undefined;
     committedKeptIds = snapshot.keptIds;
