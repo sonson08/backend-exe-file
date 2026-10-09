@@ -5,7 +5,10 @@ using Microsoft.Win32;
 
 const string AppName = "OllamaLauncher";
 const string BaseUrl = "http://localhost:11434";
-const string PreloadModel = "llama3.2"; // set to "" to skip preloading
+//const string PreloadModel = "llama3.2"; // set to "" to skip preloading
+const string PreloadModel = "hf.co/mradermacher/Distil-PII-Llama-3.2-3B-Instruct-GGUF:Q4_K_M";
+
+
 
 // Admin => all users (HKLM + ProgramData). Normal user => current user only (HKCU + LocalAppData).
 bool isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent())
