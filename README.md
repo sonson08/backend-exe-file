@@ -99,34 +99,42 @@ Warden's AI runs locally and offline. Follow these steps in order.
 
 - Windows 10/11
 - Google Chrome (or another Chromium browser that supports side panels)
+- [Git](https://git-scm.com)
 - [Node.js](https://nodejs.org) 20 or newer
 - [Ollama](https://ollama.com)
 - About 3 GB of free disk space (the model is roughly 2 GB)
 - An internet connection for the one-time model download only. After that, the model runs offline.
 
-### 1. Start Ollama with the launcher
+### 1. Clone the repository
 
-Run [`backend/repos/OllamaLauncher/dist/OllamaLauncher.exe`](backend/repos/OllamaLauncher/dist/OllamaLauncher.exe).
+```bash
+git clone git@github.com:sonson08/Warden.git
+cd Warden
+```
 
-The launcher:
+If you don't have SSH keys set up with GitHub, clone over HTTPS instead: `git clone https://github.com/sonson08/Warden.git`.
 
-- starts the Ollama server in the background if it isn't already running,
-- registers itself to start every time you log in (for all users if run as administrator, otherwise only for you), so you normally only need to run it once,
-- preloads the Distil-PII model and keeps it in memory for 30 minutes, so your first scan doesn't wait for the model to load.
+### 2. Install Ollama
 
-Check that the server is up:
+Download the Windows installer from [ollama.com/download](https://ollama.com/download) and run it. When it finishes, open a **new** Command Prompt or PowerShell window so `ollama` is on your `PATH`, then check the install:
+
+```bash
+ollama --version
+```
+
+### 3. Make sure Ollama is running
+
+Ollama usually starts on its own after installing (look for the llama icon in the system tray). Confirm the server is up:
 
 ```bash
 ollama list
 ```
 
-If this prints a table (possibly empty) without a connection error, you're good.
+If this prints a table (possibly empty) without a connection error, Ollama is running. If you get a connection error, start Ollama from the Start menu, or run `ollama serve` in a separate terminal and leave it open, then run `ollama list` again.
 
-To remove the launcher from startup, run `OllamaLauncher.exe --uninstall`.
+### 4. Download the model
 
-### 2. Download the model
-
-In Command Prompt or PowerShell, run:
+With Ollama running, run:
 
 ```bash
 ollama pull hf.co/mradermacher/Distil-PII-Llama-3.2-3B-Instruct-GGUF:Q4_K_M
@@ -134,17 +142,29 @@ ollama pull hf.co/mradermacher/Distil-PII-Llama-3.2-3B-Instruct-GGUF:Q4_K_M
 
 Wait for the download to finish (about 2 GB).
 
-### 3. Test the model
+### 5. Test the model
 
 ```bash
 ollama run hf.co/mradermacher/Distil-PII-Llama-3.2-3B-Instruct-GGUF:Q4_K_M
 ```
 
-Type a prompt. If the model replies, the setup is complete. Exit with `/bye`.
+Type a prompt. If the model replies, the model is set up. Exit with `/bye`.
 
 Warden connects to Ollama's local API at `http://localhost:11434` with this model name automatically. Nothing needs to be configured.
 
-### 4. Build the extension
+### 6. Run the launcher as administrator
+
+Right-click [`backend/repos/OllamaLauncher/dist/OllamaLauncher.exe`](backend/repos/OllamaLauncher/dist/OllamaLauncher.exe) and choose **Run as administrator**.
+
+The launcher:
+
+- starts the Ollama server in the background if it isn't already running,
+- registers itself to start every time any user logs in (running it as administrator is what makes this apply to all users; otherwise it only registers for you), so you normally only need to run it once,
+- preloads the Distil-PII model and keeps it in memory for 30 minutes, so your first scan doesn't wait for the model to load.
+
+To remove the launcher from startup, run `OllamaLauncher.exe --uninstall` (as administrator if you installed it that way).
+
+### 7. Build the extension
 
 ```bash
 cd frontend
@@ -152,7 +172,7 @@ npm install
 npm run build
 ```
 
-### 5. Load it in Chrome
+### 8. Load it in Chrome
 
 1. Open `chrome://extensions`.
 2. Turn on **Developer mode**.
@@ -163,10 +183,10 @@ npm run build
 
 | Problem | Fix |
 | --- | --- |
-| `ollama pull` says it can't connect | Run `OllamaLauncher.exe` first, then try again. |
+| `ollama pull` or `ollama list` says it can't connect | Ollama isn't running. Start it from the Start menu (or run `ollama serve`), then try again. |
 | `ollama` is not recognized | Reinstall Ollama, or restart the terminal so `PATH` updates. |
 | The download is slow or fails | Check your internet connection and rerun the same `ollama pull` command. It resumes where it left off. |
-| Port 11434 is already in use | Ollama is already running. Skip step 1. |
+| Port 11434 is already in use | Ollama is already running. You don't need to start it again. |
 
 ## How it works
 
